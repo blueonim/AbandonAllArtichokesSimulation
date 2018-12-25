@@ -1,4 +1,6 @@
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public enum Card {
 
@@ -131,8 +133,12 @@ public enum Card {
 
         @Override
         void playCard(final Game game) {
-            Player opponent = game.getCurrentPlayer().chooseOpponent(game.getOpponents());
+            List<Player> opponentsWithDeckOrDiscard = game.getOpponents().stream()
+                    .filter(Player::deckOrDiscardHasCards)
+                    .collect(Collectors.toList());
+            Player opponent = game.getCurrentPlayer().chooseOpponent(opponentsWithDeckOrDiscard);
             Card card = opponent.drawTop();
+            //TODO add illegal state checks
 
             if (game.getCurrentPlayer().doesWantCard(card)) {
                 game.getCurrentPlayer().getHand().add(card);
