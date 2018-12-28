@@ -9,8 +9,6 @@ class Game {
 
     private static final int REFILL_GARDEN_SIZE = 5;
 
-    //TODO record stats about game (check for first player advantage, ect)
-
     private final LinkedList<Player> players = new LinkedList<>();
     private final LinkedList<Card> deck = new LinkedList<>();
     private final LinkedList<Card> garden = new LinkedList<>();
@@ -54,7 +52,6 @@ class Game {
         loggers.forEach(logger -> logger.endTurn(currentPlayer));
 
         if (didWin) {
-            //TODO collect some stats with logger
             loggers.forEach(logger -> logger.gameOver(this));
             return;
         }

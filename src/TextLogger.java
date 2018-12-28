@@ -54,9 +54,7 @@ class TextLogger implements Logger {
 
         Map<Card, Integer> counts = new HashMap<>();
         for (Card card : allCards) {
-            if (!counts.containsKey(card)) {
-                counts.put(card, 0);
-            }
+            if (!counts.containsKey(card)) counts.put(card, 0);
             counts.put(card, counts.get(card) + 1);
         }
         System.out.println(counts.entrySet().stream()
