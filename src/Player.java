@@ -1,4 +1,7 @@
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 class Player {
@@ -10,11 +13,11 @@ class Player {
     private LinkedList<Card> deck = new LinkedList<>();
     private List<Card> discard = new LinkedList<>();
 
-    private boolean hasHarvested = false;
-    private int turnCounter = 0;
-
     private final String name;
     private final Strategy strategy;
+
+    private boolean hasHarvested = false;
+    private int turnCounter = 0;
 
     Player(String name, Strategy strategy) {
         this.name = name;
@@ -37,6 +40,18 @@ class Player {
         return hand;//TODO Collections.unmodifiableList() - protect against adding nulls to hand
     }
 
+    List<Card> getDeck() {
+        return Collections.unmodifiableList(deck);
+    }
+
+    List<Card> getDiscard() {
+        return Collections.unmodifiableList(discard);
+    }
+
+    int getNumberOfTurnsTaken() {
+        return turnCounter;
+    }
+
     boolean hasCardsToPlay(Game game) {
         return hand.stream().anyMatch(card -> card.canBePlayed(game));
     }
@@ -45,17 +60,23 @@ class Player {
         return !hasHarvested && !game.getGarden().isEmpty();
     }
 
-    boolean takeTurn(Game game) {
+    boolean takeTurn(Game game, Set<Logger> loggers) {
         turnCounter ++;
 
         // plant a card if your hand is all Artichokes at start of turn
         if (hand.stream().allMatch(card -> card == Card.ARTICHOKE)) {
-            addToDiscard(game.drawTop());
+            Card card = game.drawTop();
+            loggers.forEach(logger -> logger.cardPlanted(card));
+            addToDiscard(card);
         }
 
         // take actions until none left
         Action action;
         while ((action = strategy.chooseNextAction(game)) != null) {
+            for (Logger logger : loggers) {
+                logger.actionChosen(action);
+            }
+
             if (action.getType() == Action.Type.HARVEST && canHarvest(game)) {
                 // remove card from garden and throw if it does not exist
                 if (!game.getGarden().remove(action.getCard())) {
@@ -97,10 +118,7 @@ class Player {
         drawHand();
 
         // check if player wins
-        for (Card card : hand) {
-            if (card == Card.ARTICHOKE) return false;
-        }
-        return true;
+        return hand.stream().noneMatch(card -> card == Card.ARTICHOKE);
     }
 
     private void drawHand() {
@@ -128,20 +146,22 @@ class Player {
     }
 
     void putCardOnTopOfDeck(Game game) {
-        Card cardToPutOnTop = strategy.pickCardForTopOfDeck(game.getCurrentPlayer().getHand());
-        if (cardToPutOnTop == null) {
-            throw new IllegalStateException("Null card to put on top");
+        if (game.getCurrentPlayer().getHand().isEmpty()) {
+            throw new IllegalStateException("No card in hand to put on top of deck");
         }
 
-        if (!hand.remove(cardToPutOnTop)) {
-            throw new IllegalStateException("Card to put on top not in hand: " + cardToPutOnTop.name());
-        }
+        Card card = null;
+        if (game.getCurrentPlayer().getHand().size() == 1) card = game.getCurrentPlayer().getHand().get(0);
+        if (card == null) card = strategy.pickCardForTopOfDeck(game.getCurrentPlayer().getHand());
 
-        deck.addFirst(cardToPutOnTop);
+        if (card == null) throw new IllegalStateException("Null card to put on top");
+        if (!hand.remove(card)) throw new IllegalStateException("Card to put on top not in hand: " + card.name());
+
+        deck.addFirst(card);
     }
 
     Player chooseOpponent(List<Player> players) {
-        if (players.size() < 1) throw new IllegalStateException("Opponent list is empty");
+        if (players.isEmpty()) throw new IllegalStateException("Opponent list is empty");
         if (players.size() == 1) return players.get(0);
         return strategy.chooseOpponent(players);
     }
@@ -151,22 +171,20 @@ class Player {
     }
 
     void discardNonArtichoke(Game game) {
-        Card cardToDiscard = strategy.pickNonArtichokeToDiscard(game.getCurrentPlayer().getHand().stream()
-                .filter(card -> card != Card.ARTICHOKE).collect(Collectors.toList()));
+        List<Card> cards = game.getCurrentPlayer().getHand().stream()
+                .filter(card -> card != Card.ARTICHOKE).collect(Collectors.toList());
 
-        if (cardToDiscard == null) {
-            throw new IllegalStateException("Null card to discard");
-        }
+        if (cards.isEmpty()) throw new IllegalStateException("No valid card to discard");
 
-        if (cardToDiscard == Card.ARTICHOKE) {
-            throw new IllegalStateException("Cannot select Artichoke as non-Artichoke");
-        }
+        Card card = null;
+        if (cards.size() == 1) card = cards.get(0);
+        if (card == null) card = strategy.pickNonArtichokeToDiscard(cards);
 
-        if (!hand.remove(cardToDiscard)) {
-            throw new IllegalStateException("Card to discard not in hand: " + cardToDiscard.name());
-        }
+        if (card == null) throw new IllegalStateException("Null card to discard");
+        if (card == Card.ARTICHOKE) throw new IllegalStateException("Cannot select Artichoke as non-Artichoke");
+        if (!hand.remove(card)) throw new IllegalStateException("Card to discard not in hand: " + card.name());
 
-        addToDiscard(cardToDiscard);
+        addToDiscard(card);
     }
 
     boolean deckHasCards() {
@@ -184,31 +202,5 @@ class Player {
     @SuppressWarnings("SameParameterValue")
     boolean doesDiscardContain(Card card) {
         return discard.contains(card);
-    }
-
-    void printStatus() {
-        System.out.println(name);
-        System.out.println("Turns taken: " + turnCounter);
-        System.out.println("Hand: " + hand.stream().map(Enum::name).collect(Collectors.joining(", ")));
-        System.out.println("Deck: " + deck.size() + ", Discard: " + discard.size());
-
-        List<Card> allCards = new ArrayList<>();
-        allCards.addAll(hand);
-        allCards.addAll(deck);
-        allCards.addAll(discard);
-        System.out.println("Total: " + allCards.size());
-
-        Map<Card, Integer> counts = new HashMap<>();
-        for (Card card : allCards) {
-            if (!counts.containsKey(card)) {
-                counts.put(card, 0);
-            }
-            counts.put(card, counts.get(card) + 1);
-        }
-        System.out.println(counts.entrySet().stream()
-                .map(entry -> entry.getKey().name() + ":" + entry.getValue())
-                .collect(Collectors.joining(", ")));
-
-        System.out.println();
     }
 }

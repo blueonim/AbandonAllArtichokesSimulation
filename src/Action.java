@@ -18,7 +18,7 @@ class Action {
 
     @Override
     public String toString() {
-        return type.name() + " - " + card.name();
+        return type.name() + " " + card.name();
     }
 
     public enum Type {

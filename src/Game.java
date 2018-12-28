@@ -1,8 +1,9 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 class Game {
 
@@ -10,15 +11,17 @@ class Game {
 
     //TODO record stats about game (check for first player advantage, ect)
 
-    private LinkedList<Player> players = new LinkedList<>();
+    private final LinkedList<Player> players = new LinkedList<>();
+    private final LinkedList<Card> deck = new LinkedList<>();
+    private final LinkedList<Card> garden = new LinkedList<>();
+    private final Set<Logger> loggers = new HashSet<>();
+
     private Player currentPlayer;
 
-    private LinkedList<Card> deck = new LinkedList<>();
-    private LinkedList<Card> garden = new LinkedList<>();
-
-    private Game(List<Player> players, List<Card> deck) {
+    private Game(List<Player> players, List<Card> deck, Set<Logger> loggers) {
         this.players.addAll(players);
         this.deck.addAll(deck);
+        this.loggers.addAll(loggers);
     }
 
     private void start() {
@@ -35,30 +38,24 @@ class Game {
     }
 
     boolean hasOpponentWithHand() {
-        for (Player player : players) {
-            if (!player.getHand().isEmpty()) return true;
-        }
-        return false;
+        return players.stream().anyMatch(player -> !player.getHand().isEmpty());
     }
 
     boolean hasOpponentWithDeckOrDiscard() {
-        for (Player player : players) {
-            if (player.deckOrDiscardHasCards()) return true;
-        }
-        return false;
+        return players.stream().anyMatch(Player::deckOrDiscardHasCards);
     }
 
     private void nextPlayersTurn() {
         if (currentPlayer != null) players.addLast(currentPlayer);
         currentPlayer = players.removeFirst();
 
-        boolean didWin = currentPlayer.takeTurn(this);
-
-        currentPlayer.printStatus();
+        loggers.forEach(logger -> logger.startTurn(currentPlayer));
+        boolean didWin = currentPlayer.takeTurn(this, loggers);
+        loggers.forEach(logger -> logger.endTurn(currentPlayer));
 
         if (didWin) {
-            //TODO collect some stats
-            System.out.println(currentPlayer.getName() + " wins!");
+            //TODO collect some stats with logger
+            loggers.forEach(logger -> logger.gameOver(this));
             return;
         }
 
@@ -73,7 +70,7 @@ class Game {
             if (card == null) return;
             garden.addFirst(card);
         }
-        printStatus();
+        loggers.forEach(logger -> logger.gardenRefreshed(garden));
     }
 
     LinkedList<Card> getGarden() {
@@ -101,15 +98,10 @@ class Game {
         }
     }
 
-    private void printStatus() {
-        //TODO add more here
-        System.out.println("Garden: " + garden.stream().map(Enum::name).collect(Collectors.joining(", ")));
-        System.out.println();
-    }
-
     static class Builder {
         private List<Player> players = new ArrayList<>();
         private List<Card> deck = new ArrayList<>();
+        private Set<Logger> loggers = new HashSet<>();
 
         Builder addPlayer(Player player) {
             players.add(player);
@@ -124,11 +116,15 @@ class Game {
             return this;
         }
 
+        Builder addLogger(Logger logger) {
+            loggers.add(logger);
+            return this;
+        }
+
         void start() {
-            //TODO add validation
             Collections.shuffle(players);
             Collections.shuffle(deck);
-            new Game(players, deck).start();
+            new Game(players, deck, loggers).start();
         }
     }
 }

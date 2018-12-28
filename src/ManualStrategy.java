@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 class ManualStrategy implements Strategy {
 
@@ -28,7 +29,16 @@ class ManualStrategy implements Strategy {
                 .map(card -> new Action(Action.Type.PLAY, card))
                 .forEachOrdered(actions::add);
 
-        game.getCurrentPlayer().printStatus();
+        // prompt player
+        System.out.println();
+        System.out.println("Garden: " + game.getGarden().stream().map(Enum::name)
+                .collect(Collectors.joining(", ")));
+        System.out.println("Hand: " + game.getCurrentPlayer().getHand().stream().map(Enum::name)
+                .collect(Collectors.joining(", ")));
+        System.out.print("Deck: " + game.getCurrentPlayer().getDeck().size() + " - Discard: ");
+        System.out.println(game.getCurrentPlayer().getDiscard().stream().map(Enum::name)
+                .collect(Collectors.joining(", ")));
+        System.out.println();
         System.out.println("Choose an action:");
 
         // number options 1 - n
