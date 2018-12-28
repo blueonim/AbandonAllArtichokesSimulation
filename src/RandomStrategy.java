@@ -29,31 +29,31 @@ public class RandomStrategy implements Strategy {
     }
 
     @Override
-    public Card pickCardForTopOfDeck(Game game) {
-        if (game.getCurrentPlayer().getHand().isEmpty()) return null;
-        if (game.getCurrentPlayer().getHand().stream().anyMatch(card -> card == Card.ARTICHOKE)) return Card.ARTICHOKE;
+    public Card pickCardForTopOfDeck(final List<Card> cards) {
+        if (cards.isEmpty()) return null;
+        if (cards.stream().anyMatch(card -> card == Card.ARTICHOKE)) return Card.ARTICHOKE;
 
-        List<Card> hand = new ArrayList<>(game.getCurrentPlayer().getHand());
+        List<Card> hand = new ArrayList<>(cards);
         Collections.shuffle(hand);
         return hand.get(0);
     }
 
     @Override
-    public Player chooseOpponent(List<Player> players) {
+    public Player chooseOpponent(final List<Player> players) {
         List<Player> opponentList = new ArrayList<>(players);
         Collections.shuffle(opponentList);
         return opponentList.get(0);
     }
 
     @Override
-    public Card pickNonArtichokeToDiscard(Game game) {
-        List<Card> hand = new ArrayList<>(game.getCurrentPlayer().getHand());
+    public Card pickNonArtichokeToDiscard(final List<Card> cards) {
+        List<Card> hand = new ArrayList<>(cards);
         Collections.shuffle(hand);
         return hand.stream().filter(card -> card != Card.ARTICHOKE).findFirst().orElse(null);
     }
 
     @Override
-    public boolean doesWantCard(Card card) {
+    public boolean doesWantCard(final Card card) {
         return card != Card.ARTICHOKE;
     }
 }

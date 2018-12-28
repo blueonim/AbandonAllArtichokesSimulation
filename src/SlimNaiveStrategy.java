@@ -25,7 +25,7 @@ class SlimNaiveStrategy extends SimpleStrategy {
     }};
 
     @Override
-    List<Action> playOrder(Game game) {
+    List<Action> playOrder(final Game game) {
         return playOrder;
     }
 }

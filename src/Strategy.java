@@ -4,11 +4,11 @@ public interface Strategy {
 
     Action chooseNextAction(final Game game);
 
-    Card pickCardForTopOfDeck(final Game game);
+    Card pickCardForTopOfDeck(final List<Card> cards);
 
     Player chooseOpponent(final List<Player> players);
 
-    Card pickNonArtichokeToDiscard(final Game game);
+    Card pickNonArtichokeToDiscard(final List<Card> cards);
 
-    boolean doesWantCard(Card card);
+    boolean doesWantCard(final Card card);
 }

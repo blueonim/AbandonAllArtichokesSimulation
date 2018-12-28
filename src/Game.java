@@ -57,8 +57,8 @@ class Game {
         currentPlayer.printStatus();
 
         if (didWin) {
-            //TODO collection some stats
-            System.out.println("Game Over");
+            //TODO collect some stats
+            System.out.println(currentPlayer.getName() + " wins!");
             return;
         }
 

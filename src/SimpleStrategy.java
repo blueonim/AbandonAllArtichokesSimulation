@@ -2,7 +2,7 @@ import java.util.List;
 
 abstract class SimpleStrategy extends RandomStrategy {
 
-    abstract List<Action> playOrder(Game game);
+    abstract List<Action> playOrder(final Game game);
 
     @Override
     public Action chooseNextAction(final Game game) {

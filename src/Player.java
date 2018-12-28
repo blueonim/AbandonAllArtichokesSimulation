@@ -29,8 +29,12 @@ class Player {
         drawHand();
     }
 
+    String getName() {
+        return name;
+    }
+
     LinkedList<Card> getHand() {
-        return hand;
+        return hand;//TODO Collections.unmodifiableList() - protect against adding nulls to hand
     }
 
     boolean hasCardsToPlay(Game game) {
@@ -74,6 +78,10 @@ class Player {
                 // throw if invalid action is selected
                 throw new IllegalStateException("Invalid action selected: " + action);
             }
+        }
+
+        if (canHarvest(game)) {
+            throw new IllegalStateException("Players must harvest on their turn, if possible");
         }
 
         return turnEnd();
@@ -120,7 +128,7 @@ class Player {
     }
 
     void putCardOnTopOfDeck(Game game) {
-        Card cardToPutOnTop = strategy.pickCardForTopOfDeck(game);
+        Card cardToPutOnTop = strategy.pickCardForTopOfDeck(game.getCurrentPlayer().getHand());
         if (cardToPutOnTop == null) {
             throw new IllegalStateException("Null card to put on top");
         }
@@ -133,6 +141,8 @@ class Player {
     }
 
     Player chooseOpponent(List<Player> players) {
+        if (players.size() < 1) throw new IllegalStateException("Opponent list is empty");
+        if (players.size() == 1) return players.get(0);
         return strategy.chooseOpponent(players);
     }
 
@@ -141,7 +151,9 @@ class Player {
     }
 
     void discardNonArtichoke(Game game) {
-        Card cardToDiscard = strategy.pickNonArtichokeToDiscard(game);
+        Card cardToDiscard = strategy.pickNonArtichokeToDiscard(game.getCurrentPlayer().getHand().stream()
+                .filter(card -> card != Card.ARTICHOKE).collect(Collectors.toList()));
+
         if (cardToDiscard == null) {
             throw new IllegalStateException("Null card to discard");
         }
