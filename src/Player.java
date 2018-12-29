@@ -83,7 +83,15 @@ class Player {
                     throw new IllegalStateException("Card does not exist in Garden: " + action.getCard());
                 }
 
-                hand.add(action.getCard());
+                switch (action.getCard().getHarvestAction()) {
+                    case ADD_TO_DISCARD:
+                        addToDiscard(action.getCard());
+                        break;
+                    case ADD_TO_HAND:
+                    default:
+                        hand.add(action.getCard());
+                        break;
+                }
                 hasHarvested = true;
 
             } else if (action.getType() == Action.Type.PLAY && action.getCard().canBePlayed(game)) {
@@ -145,7 +153,7 @@ class Player {
         Collections.shuffle(deck);
     }
 
-    void putCardOnTopOfDeck(Game game) {
+    void pickCardForTopOfDeck(Game game) {
         if (game.getCurrentPlayer().getHand().isEmpty()) {
             throw new IllegalStateException("No card in hand to put on top of deck");
         }
@@ -157,6 +165,10 @@ class Player {
         if (card == null) throw new IllegalStateException("Null card to put on top");
         if (!hand.remove(card)) throw new IllegalStateException("Card to put on top not in hand: " + card.name());
 
+        addToTopOfDeck(card);
+    }
+
+    void addToTopOfDeck(Card card) {
         deck.addFirst(card);
     }
 

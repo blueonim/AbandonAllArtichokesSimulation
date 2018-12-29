@@ -4,7 +4,7 @@ import java.util.stream.Collectors;
 
 public enum Card {
 
-    ARTICHOKE(CompostAction.REMOVE) {
+    ARTICHOKE(HarvestAction.ADD_TO_HAND, CompostAction.REMOVE) {
         @Override
         boolean canBePlayed(final Game game) {
             return false;
@@ -15,7 +15,7 @@ public enum Card {
             // no-op
         }
     },
-    POTATO(CompostAction.ADD_TO_BOTTOM) {
+    POTATO(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(final Game game) {
             return game.getCurrentPlayer().deckOrDiscardHasCards();
@@ -26,7 +26,7 @@ public enum Card {
             game.compostCard(game.getCurrentPlayer().drawTop(), game.getCurrentPlayer());
         }
     },
-    CARROT(CompostAction.ADD_TO_BOTTOM) {
+    CARROT(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(final Game game) {
             return !game.getGarden().isEmpty();
@@ -37,7 +37,7 @@ public enum Card {
             game.getCurrentPlayer().addToDiscard(game.getGarden().removeLast());
         }
     },
-    BROCCOLI(CompostAction.ADD_TO_BOTTOM) {
+    BROCCOLI_V1(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(final Game game) {
             // has at least 2 cards (including the Broccoli)
@@ -49,11 +49,25 @@ public enum Card {
         @Override
         void playCard(final Game game) {
             Card card = game.getCurrentPlayer().drawTop();
-            game.getCurrentPlayer().putCardOnTopOfDeck(game);
+            game.getCurrentPlayer().pickCardForTopOfDeck(game);
             game.getCurrentPlayer().getHand().add(card);
         }
     },
-    ONION(CompostAction.ADD_TO_BOTTOM) {
+    BROCCOLI_V2(HarvestAction.ADD_TO_DISCARD, CompostAction.ADD_TO_BOTTOM) {
+        @Override
+        boolean canBePlayed(Game game) {
+            return game.getCurrentPlayer().getHand().stream().filter(card -> card == ARTICHOKE).count() > 3;
+        }
+
+        @Override
+        void playCard(Game game) {
+            while (!game.getCurrentPlayer().getHand().isEmpty()) {
+                Card card = game.getCurrentPlayer().getHand().removeFirst();
+                game.compostCard(card, game.getCurrentPlayer());
+            }
+        }
+    },
+    ONION(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(final Game game) {
             // has at least 2 non-Artichokes (including the Onion)
@@ -66,16 +80,20 @@ public enum Card {
         @Override
         void playCard(final Game game) {
             // choose opponent, compost random card
-            Player opponent = game.getCurrentPlayer().chooseOpponent(game.getOpponents());
+            List<Player> opponentsWithHand = game.getOpponents().stream()
+                    .filter(player -> !player.getHand().isEmpty())
+                    .collect(Collectors.toList());
+            Player opponent = game.getCurrentPlayer().chooseOpponent(opponentsWithHand);
             Collections.shuffle(opponent.getHand());
             game.compostCard(opponent.getHand().removeFirst(), opponent);
+            //TODO add illegal state checks
 
             // compost random card from hand
             Collections.shuffle(game.getCurrentPlayer().getHand());
             game.compostCard(game.getCurrentPlayer().getHand().removeFirst(), game.getCurrentPlayer());
         }
     },
-    BANANA(CompostAction.ADD_TO_BOTTOM) {
+    BANANA(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(final Game game) {
             return game.getCurrentPlayer().deckHasCards();
@@ -93,7 +111,7 @@ public enum Card {
             }
         }
     },
-    AVOCADO(CompostAction.DISCARD) {
+    AVOCADO(HarvestAction.ADD_TO_HAND, CompostAction.DISCARD) {
         @Override
         boolean canBePlayed(final Game game) {
             return game.getCurrentPlayer().deckOrDiscardHasCards();
@@ -104,7 +122,7 @@ public enum Card {
             game.getCurrentPlayer().shuffleDeckAndDiscard();
         }
     },
-    RADISH(CompostAction.DISCARD) {
+    RADISH(HarvestAction.ADD_TO_HAND, CompostAction.DISCARD) {
         @Override
         boolean canBePlayed(final Game game) {
             // has at least 1 Artichoke to compost
@@ -125,7 +143,7 @@ public enum Card {
             }
         }
     },
-    LEMON(CompostAction.ADD_TO_BOTTOM) {
+    LEMON(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(final Game game) {
             return game.hasOpponentWithDeckOrDiscard();
@@ -147,7 +165,7 @@ public enum Card {
             }
         }
     },
-    PEAR(CompostAction.ADD_TO_BOTTOM) {
+    PEAR_V1(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(final Game game) {
             // has at least 2 non-Artichokes (including the Pear)
@@ -170,12 +188,49 @@ public enum Card {
                 }
             }
         }
+    },
+    PEAR_V2(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
+        @Override
+        boolean canBePlayed(Game game) {
+            return true;
+        }
+
+        @Override
+        void playCard(Game game) {
+            // check top of current player's deck
+            Card currentPlayerCard = game.getCurrentPlayer().drawTop();
+            if (currentPlayerCard != null) {
+                if (currentPlayerCard == ARTICHOKE) {
+                    game.compostCard(currentPlayerCard, game.getCurrentPlayer());
+                } else {
+                    game.getCurrentPlayer().addToTopOfDeck(currentPlayerCard);
+                }
+            }
+
+            // check top of all opponent's decks
+            for (Player player : game.getOpponents()) {
+                Card playerCard = player.drawTop();
+                if (playerCard != null) {
+                    if (playerCard == ARTICHOKE) {
+                        game.compostCard(playerCard, player);
+                    } else {
+                        player.addToTopOfDeck(playerCard);
+                    }
+                }
+            }
+        }
     };
 
+    private final HarvestAction harvestAction;
     private final CompostAction compostAction;
 
-    Card(CompostAction compostAction) {
+    Card(HarvestAction harvestAction, CompostAction compostAction) {
+        this.harvestAction = harvestAction;
         this.compostAction = compostAction;
+    }
+
+    public HarvestAction getHarvestAction() {
+        return harvestAction;
     }
 
     public CompostAction getCompostAction() {
