@@ -22,4 +22,26 @@ abstract class SimpleStrategy extends RandomStrategy {
         // fallback to random action if no picks are valid
         return super.chooseNextAction(game);
     }
+
+    @Override
+    public Player chooseOpponent(final List<Player> players) {
+        if (players.isEmpty()) throw new IllegalStateException("Opponent list is empty");
+        if (players.size() == 1) return players.get(0);
+
+        //TODO this is sort of cheating
+        //TODO in the future the player information should be restricted like in a real game
+        //TODO will need to track things over the game and make some guesses who the "leader" is
+
+        // attack the leader - lowest percentage of Artichokes
+        Player leader = null;
+        float bestRate = 1f;
+        for (Player opponent : players) {
+            float rate = opponent.getArtichokeRate();
+            if (leader == null || rate < bestRate) {
+                leader = opponent;
+                bestRate = rate;
+            }
+        }
+        return leader;
+    }
 }

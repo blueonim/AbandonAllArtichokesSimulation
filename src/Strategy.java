@@ -10,5 +10,9 @@ public interface Strategy {
 
     Card pickNonArtichokeToDiscard(final List<Card> cards);
 
+    Card pickCardToGiveOpponent(final List<Card> cards);
+
+    Card pickNonArtichokeToGiveOpponent(final List<Card> cards);
+
     boolean doesWantCard(final Card card);
 }

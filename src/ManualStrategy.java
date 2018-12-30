@@ -111,6 +111,38 @@ class ManualStrategy implements Strategy {
     }
 
     @Override
+    public Card pickCardToGiveOpponent(List<Card> cards) {
+        System.out.println("Pick card to give to opponent:");
+
+        // number options 1 - n
+        int position = 1;
+        for (Card card : cards) {
+            System.out.println(position + " - " + card);
+            position++;
+        }
+
+        // read input and adjust for true position
+        int input = readInput(cards.size());
+        return cards.get(input - 1);
+    }
+
+    @Override
+    public Card pickNonArtichokeToGiveOpponent(List<Card> cards) {
+        System.out.println("Pick non-Artichoke to give to opponent:");
+
+        // number options 1 - n
+        int position = 1;
+        for (Card card : cards) {
+            System.out.println(position + " - " + card);
+            position++;
+        }
+
+        // read input and adjust for true position
+        int input = readInput(cards.size());
+        return cards.get(input - 1);
+    }
+
+    @Override
     public boolean doesWantCard(final Card card) {
         System.out.println("Do you want to take " + card + "?");
         System.out.println("1 - Yes");

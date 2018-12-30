@@ -53,6 +53,23 @@ public class RandomStrategy implements Strategy {
     }
 
     @Override
+    public Card pickCardToGiveOpponent(List<Card> cards) {
+        if (cards.isEmpty()) return null;
+        if (cards.stream().anyMatch(card -> card == Card.ARTICHOKE)) return Card.ARTICHOKE;
+
+        List<Card> hand = new ArrayList<>(cards);
+        Collections.shuffle(hand);
+        return hand.get(0);
+    }
+
+    @Override
+    public Card pickNonArtichokeToGiveOpponent(List<Card> cards) {
+        List<Card> hand = new ArrayList<>(cards);
+        Collections.shuffle(hand);
+        return hand.stream().filter(card -> card != Card.ARTICHOKE).findFirst().orElse(null);
+    }
+
+    @Override
     public boolean doesWantCard(final Card card) {
         return card != Card.ARTICHOKE;
     }

@@ -74,9 +74,17 @@ class Game {
         return garden;
     }
 
+    int getRemainingGardenSize() {
+        return garden.size() + deck.size();
+    }
+
     Card drawTop() {
         if (deck.isEmpty()) return null;
         return deck.removeFirst();
+    }
+
+    void addToTopOfDeck(Card card) {
+        if (card != null) deck.addFirst(card);
     }
 
     void compostCard(Card card, Player owner) {
@@ -118,9 +126,19 @@ class Game {
             return this;
         }
 
-        void start() {
+        void start(int ... startingDeckSizes) {
+            if (startingDeckSizes.length != players.size()) {
+                throw new IllegalStateException("Number of deck sizes not equal to number of players");
+            }
+
             Collections.shuffle(players);
             Collections.shuffle(deck);
+
+            // initialize player decks
+            for (int i = 0; i < players.size(); i++) {
+                players.get(i).initialize(startingDeckSizes[i]);
+            }
+
             new Game(players, deck, loggers).start();
         }
     }

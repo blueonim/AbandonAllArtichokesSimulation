@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,10 +45,7 @@ class TextLogger implements Logger {
                 .collect(Collectors.joining(", ")));
         System.out.print("Deck: " + player.getDeck().size() + ", Discard: " + player.getDiscard().size());
 
-        List<Card> allCards = new ArrayList<>();
-        allCards.addAll(player.getHand());
-        allCards.addAll(player.getDeck());
-        allCards.addAll(player.getDiscard());
+        List<Card> allCards = player.getAllCards();
         System.out.println(" Total: " + allCards.size());
 
         Map<Card, Integer> counts = new HashMap<>();

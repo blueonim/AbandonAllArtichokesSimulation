@@ -1,12 +1,8 @@
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 class Player {
 
-    private static final int STARTING_DECK_SIZE = 10;
     private static final int REFILL_HAND_SIZE = 5;
 
     private LinkedList<Card> hand = new LinkedList<>();
@@ -22,9 +18,11 @@ class Player {
     Player(String name, Strategy strategy) {
         this.name = name;
         this.strategy = strategy;
+    }
 
+    void initialize(int startingDeckSize) {
         // initialize deck
-        while (deck.size() < STARTING_DECK_SIZE) {
+        while (deck.size() < startingDeckSize) {
             deck.add(Card.ARTICHOKE);
         }
 
@@ -46,6 +44,21 @@ class Player {
 
     List<Card> getDiscard() {
         return Collections.unmodifiableList(discard);
+    }
+
+    //TODO in the future the player information should be restricted like in a real game
+    List<Card> getAllCards() {
+        List<Card> allCards = new ArrayList<>();
+        allCards.addAll(hand);
+        allCards.addAll(deck);
+        allCards.addAll(discard);
+        return allCards;
+    }
+
+    float getArtichokeRate() {
+        List<Card> allCards = getAllCards();
+        long numArtichokes = allCards.stream().filter(card -> card == Card.ARTICHOKE).count();
+        return (float) numArtichokes / allCards.size();
     }
 
     int getNumberOfTurnsTaken() {
@@ -153,14 +166,12 @@ class Player {
         Collections.shuffle(deck);
     }
 
-    void pickCardForTopOfDeck(Game game) {
-        if (game.getCurrentPlayer().getHand().isEmpty()) {
-            throw new IllegalStateException("No card in hand to put on top of deck");
-        }
+    void pickCardForTopOfDeck() {
+        if (hand.isEmpty()) throw new IllegalStateException("No card in hand to put on top of deck");
 
         Card card = null;
-        if (game.getCurrentPlayer().getHand().size() == 1) card = game.getCurrentPlayer().getHand().get(0);
-        if (card == null) card = strategy.pickCardForTopOfDeck(game.getCurrentPlayer().getHand());
+        if (hand.size() == 1) card = hand.get(0);
+        if (card == null) card = strategy.pickCardForTopOfDeck(hand);
 
         if (card == null) throw new IllegalStateException("Null card to put on top");
         if (!hand.remove(card)) throw new IllegalStateException("Card to put on top not in hand: " + card.name());
@@ -182,9 +193,8 @@ class Player {
         return strategy.doesWantCard(card);
     }
 
-    void discardNonArtichoke(Game game) {
-        List<Card> cards = game.getCurrentPlayer().getHand().stream()
-                .filter(card -> card != Card.ARTICHOKE).collect(Collectors.toList());
+    void discardNonArtichoke() {
+        List<Card> cards = hand.stream().filter(card -> card != Card.ARTICHOKE).collect(Collectors.toList());
 
         if (cards.isEmpty()) throw new IllegalStateException("No valid card to discard");
 
@@ -197,6 +207,33 @@ class Player {
         if (!hand.remove(card)) throw new IllegalStateException("Card to discard not in hand: " + card.name());
 
         addToDiscard(card);
+    }
+
+    Card giveCardToOpponent() {
+        if (hand.isEmpty()) throw new IllegalStateException("Hand is empty");
+        if (hand.size() == 1) return hand.removeFirst();
+
+        Card card = strategy.pickCardToGiveOpponent(Collections.unmodifiableList(hand));
+        if (card == null) throw new IllegalStateException("Null card to give to opponent");
+        if (!hand.remove(card)) throw new IllegalStateException("Card to give to opponent not in hand: " + card.name());
+
+        return card;
+    }
+
+    Card giveNonArtichokeToOpponent() {
+        List<Card> cards = hand.stream().filter(card -> card != Card.ARTICHOKE).collect(Collectors.toList());
+
+        if (cards.isEmpty()) throw new IllegalStateException("No valid card to give to opponent");
+
+        Card card = null;
+        if (cards.size() == 1) card = cards.get(0);
+        if (card == null) card = strategy.pickNonArtichokeToGiveOpponent(cards);
+
+        if (card == null) throw new IllegalStateException("Null card to give to opponent");
+        if (card == Card.ARTICHOKE) throw new IllegalStateException("Cannot select Artichoke as non-Artichoke");
+        if (!hand.remove(card)) throw new IllegalStateException("Card to give opponent not in hand: " + card.name());
+
+        return card;
     }
 
     boolean deckHasCards() {

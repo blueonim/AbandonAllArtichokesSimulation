@@ -49,22 +49,23 @@ public enum Card {
         @Override
         void playCard(final Game game) {
             Card card = game.getCurrentPlayer().drawTop();
-            game.getCurrentPlayer().pickCardForTopOfDeck(game);
+            game.getCurrentPlayer().pickCardForTopOfDeck();
             game.getCurrentPlayer().getHand().add(card);
         }
     },
     BROCCOLI_V2(HarvestAction.ADD_TO_DISCARD, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(Game game) {
-            return game.getCurrentPlayer().getHand().stream().filter(card -> card == ARTICHOKE).count() > 3;
+            return game.getCurrentPlayer().getHand().stream().filter(card -> card == ARTICHOKE).count() > 2;
         }
 
         @Override
         void playCard(Game game) {
-            while (!game.getCurrentPlayer().getHand().isEmpty()) {
-                Card card = game.getCurrentPlayer().getHand().removeFirst();
-                game.compostCard(card, game.getCurrentPlayer());
+            // compost 2 Artichokes from hand
+            if (!game.getCurrentPlayer().getHand().remove(ARTICHOKE)) {
+                throw new IllegalStateException("No Artichoke in hand to compost");
             }
+            game.compostCard(ARTICHOKE, game.getCurrentPlayer());
         }
     },
     ONION(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
@@ -109,6 +110,34 @@ public enum Card {
                 }
                 game.getCurrentPlayer().addToDiscard(card);
             }
+        }
+    },
+    OLD_BANANA(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
+        @Override
+        boolean canBePlayed(Game game) {
+            // has at least 2 cards (including the Broccoli)
+            if (game.getCurrentPlayer().getHand().size() < 2) return false;
+
+            return game.hasOpponentWithHand();
+        }
+
+        @Override
+        void playCard(Game game) {
+            // choose card to give from hand
+            Card cardToGive = game.getCurrentPlayer().giveCardToOpponent();
+
+            // choose opponent, take random card
+            List<Player> opponentsWithHand = game.getOpponents().stream()
+                    .filter(player -> !player.getHand().isEmpty())
+                    .collect(Collectors.toList());
+            Player opponent = game.getCurrentPlayer().chooseOpponent(opponentsWithHand);
+            Collections.shuffle(opponent.getHand());
+            Card stolenCard = opponent.getHand().removeFirst();
+            //TODO add illegal state checks
+
+            // give chosen card to opponent and add stolen card to hand
+            opponent.getHand().add(cardToGive);
+            game.getCurrentPlayer().getHand().add(stolenCard);
         }
     },
     AVOCADO(HarvestAction.ADD_TO_HAND, CompostAction.DISCARD) {
@@ -179,7 +208,7 @@ public enum Card {
 
         @Override
         void playCard(final Game game) {
-            game.getCurrentPlayer().discardNonArtichoke(game);
+            game.getCurrentPlayer().discardNonArtichoke();
             for (Card card : game.getCurrentPlayer().getHand()) {
                 if (card == ARTICHOKE) {
                     game.getCurrentPlayer().getHand().remove(card);
@@ -189,7 +218,7 @@ public enum Card {
             }
         }
     },
-    PEAR_V2(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
+    POTATO_V2(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
         @Override
         boolean canBePlayed(Game game) {
             return true;
@@ -218,6 +247,45 @@ public enum Card {
                     }
                 }
             }
+        }
+    },
+    TRADE(HarvestAction.ADD_TO_HAND, CompostAction.ADD_TO_BOTTOM) {
+        @Override
+        boolean canBePlayed(Game game) {
+            // has at least 2 non-Artichokes (including the this card)
+            long nonCount = game.getCurrentPlayer().getHand().stream().filter(card -> card != ARTICHOKE).count();
+            if (nonCount < 2) return false;
+
+            return game.hasOpponentWithHand();
+        }
+
+        @Override
+        void playCard(Game game) {
+            // choose opponent, they choose non-Artichoke card if it exists
+            List<Player> opponentsWithHand = game.getOpponents().stream()
+                    .filter(player -> !player.getHand().isEmpty())
+                    .collect(Collectors.toList());
+            Player opponent = game.getCurrentPlayer().chooseOpponent(opponentsWithHand);
+
+            // check if opponent has non-Artichokes
+            if (opponent.getHand().stream().anyMatch(card -> card != ARTICHOKE)) {
+                // each player chooses non-Artichoke to trade
+                Card playerCard = game.getCurrentPlayer().giveNonArtichokeToOpponent();
+                Card opponentCard = opponent.giveNonArtichokeToOpponent();
+
+                // trade cards
+                game.getCurrentPlayer().getHand().add(opponentCard);
+                opponent.getHand().add(playerCard);
+
+            } else if (!game.getGarden().isEmpty()) {
+                // swap with top of garden deck
+                Card playerCard = game.getCurrentPlayer().giveNonArtichokeToOpponent();
+                Card gardenCard = game.drawTop();
+                game.getCurrentPlayer().getHand().add(gardenCard);
+                game.addToTopOfDeck(playerCard);
+            }
+
+            // otherwise nothing happens
         }
     };
 
